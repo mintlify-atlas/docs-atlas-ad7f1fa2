@@ -1,0 +1,111 @@
+---
+title: "Note sharing"
+description: "Share individual notes with other Anchor users and control their level of access."
+---
+
+Anyone who owns a note can share it with other registered users. Shared notes appear in the recipient's main notes list alongside their own notes.
+
+## Permission levels
+
+There are two permission levels defined in the `NoteSharePermission` enum:
+
+| Permission | Can view | Can edit |
+|------------|----------|----------|
+| `viewer` | Yes | No |
+| `editor` | Yes | Yes |
+
+Editors can update the note's title, content, background, and tags. Only the owner can change `state` (trash/restore) and `isArchived`.
+
+## NoteShare data model
+
+The `NoteShare` model tracks each individual share:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `String` (UUID) | Unique share record identifier |
+| `noteId` | `String` | The shared note |
+| `sharedWithUserId` | `String` | Recipient user ID |
+| `sharedByUserId` | `String` | Sharing user (owner) ID |
+| `permission` | `NoteSharePermission` | `viewer` or `editor` |
+| `isDeleted` | `Boolean` | Soft-delete flag (share revoked) |
+| `createdAt` | `DateTime` | When the share was created |
+| `updatedAt` | `DateTime` | Last updated |
+
+A note can only be shared once with any given user — the `(noteId, sharedWithUserId)` pair is unique.
+
+## Sharing a note
+
+<Steps>
+  <Step title="Open share settings">
+    Open the note you want to share and click the **Share** button in the toolbar (or use the note's context menu).
+  </Step>
+  <Step title="Find the recipient">
+    Enter the recipient's user ID. Use the user search in the UI to look up users by email or name.
+  </Step>
+  <Step title="Choose a permission level">
+    Select **Viewer** (read-only) or **Editor** (can edit the note).
+  </Step>
+  <Step title="Confirm">
+    Click **Share**. The share record is created immediately.
+  </Step>
+</Steps>
+
+The underlying API call is:
+
+```http
+POST /api/notes/:id/shares
+Content-Type: application/json
+
+{
+  "sharedWithUserId": "<recipient-user-uuid>",
+  "permission": "viewer"
+}
+```
+
+## Viewing active shares
+
+To see who a note is currently shared with:
+
+```http
+GET /api/notes/:id/shares
+```
+
+Only the note owner can call this endpoint.
+
+## How shared notes appear to recipients
+
+Shared notes are included in the recipient's standard note list response (`GET /api/notes`). The response includes share metadata so the client can determine:
+
+- Whether the current user is the owner or a collaborator.
+- What permission level the current user has.
+
+The sync endpoint (`POST /api/notes/sync`) also delivers shared notes to the recipient's local database, so they are available offline after the first sync.
+
+## Updating permissions
+
+To change a collaborator's permission level after sharing:
+
+```http
+PATCH /api/notes/:id/shares/:shareId
+Content-Type: application/json
+
+{
+  "permission": "editor"
+}
+```
+
+Only the note owner can update share permissions.
+
+## Revoking access
+
+To remove a user's access to a note:
+
+```http
+DELETE /api/notes/:id/shares/:shareId
+```
+
+Revocation soft-deletes the share record (`isDeleted: true`). The sync protocol then propagates the revocation to the recipient's device via the `revokedSharedNoteIds` field in the sync response, so the note is removed from their local database on the next sync.
+
+<Note>
+  Revoked share records are purged from the database after a 30-day retention window, along with deleted note tombstones.
+</Note>

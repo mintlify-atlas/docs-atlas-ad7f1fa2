@@ -1,0 +1,171 @@
+---
+title: "Admin panel"
+description: "Manage users, control registration, view system statistics, and configure OIDC from the admin panel."
+---
+
+The admin panel is accessible only to users with `isAdmin: true`. It provides controls for user management, registration policy, system statistics, and OIDC configuration.
+
+## Accessing the admin panel
+
+Navigate to **Settings → Admin** in the sidebar (the link is only visible to admin users). All admin API routes are protected by `AdminGuard`, which verifies the `isAdmin` flag on the authenticated user.
+
+<Warning>
+  The last admin account cannot be deleted or demoted. Anchor enforces this constraint server-side to prevent accidental lockout.
+</Warning>
+
+## System statistics
+
+The **Stats** section at the top of the admin panel shows a real-time summary of the instance:
+
+| Metric | Description |
+|--------|-------------|
+| Total users | Count of all registered user accounts |
+| Total notes | Count of all non-deleted notes across all users |
+| Total tags | Count of all tag records |
+
+API: `GET /api/admin/stats`
+
+## User management
+
+### Listing users
+
+The user list shows all accounts with their email, name, admin status, account status (`active` or `pending`), authentication method (`local` or `oidc`), and note/tag counts.
+
+```
+GET /api/admin/users?skip=0&take=50
+```
+
+Results are paginated. `skip` and `take` control the offset and page size (default `take=50`).
+
+### Creating a user
+
+Admins can create new local accounts directly from the admin panel without going through the registration flow:
+
+```http
+POST /api/admin/users
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "name": "Alice",
+  "password": "temporaryPassword"
+}
+```
+
+### Updating a user
+
+Admins can update a user's email, name, and admin status:
+
+```http
+PATCH /api/admin/users/:id
+Content-Type: application/json
+
+{
+  "email": "newemail@example.com",
+  "name": "Alice Smith",
+  "isAdmin": true
+}
+```
+
+<Note>
+  An admin cannot change their own `isAdmin` flag via this endpoint — a `400 Bad Request` is returned. You also cannot demote the last remaining admin.
+</Note>
+
+### Resetting a password
+
+```http
+POST /api/admin/users/:id/reset-password
+Content-Type: application/json
+
+{
+  "newPassword": "newSecurePassword"
+}
+```
+
+If `newPassword` is omitted, the server generates a cryptographically random 16-character password and returns it in the response. This generated password is only shown once.
+
+### Deleting a user
+
+```http
+DELETE /api/admin/users/:id
+```
+
+Deleting a user permanently removes their account. All of their notes and tags are cascade-deleted by the database. You cannot delete the last admin user.
+
+## Pending user approvals
+
+When registration mode is set to **review**, new sign-ups are placed in a `pending` state and cannot log in until an admin acts on them.
+
+<Steps>
+  <Step title="View pending users">
+    The **Pending approvals** section lists all accounts awaiting review (`GET /api/admin/users/pending`).
+  </Step>
+  <Step title="Approve a user">
+    Click **Approve** to activate the account. The user's `status` changes from `pending` to `active`.
+
+    ```http
+    POST /api/admin/users/:id/approve
+    ```
+  </Step>
+  <Step title="Reject a user">
+    Click **Reject** to permanently delete the pending account.
+
+    ```http
+    POST /api/admin/users/:id/reject
+    ```
+  </Step>
+</Steps>
+
+## Registration control
+
+Admins can change the registration mode at any time from the admin panel (**Settings → Registration**).
+
+| Mode | Behavior |
+|------|----------|
+| `enabled` | Anyone can register and immediately log in |
+| `disabled` | The registration form is hidden; no new sign-ups |
+| `review` | New sign-ups are placed in `pending` state and require admin approval |
+
+```http
+PATCH /api/admin/settings/registration
+Content-Type: application/json
+
+{
+  "mode": "review"
+}
+```
+
+<Tip>
+  The `USER_SIGNUP` environment variable sets the registration mode at startup and takes precedence over the admin UI setting. Remove or leave it unset to allow admins to control registration mode dynamically.
+</Tip>
+
+## OIDC configuration
+
+OIDC can be configured through the admin panel when the environment variables (`OIDC_ENABLED`, `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`) are not all set via the environment. Navigate to **Settings → OIDC Authentication**.
+
+### Available OIDC settings
+
+| Setting | Description |
+|---------|-------------|
+| Enabled | Toggles OIDC authentication on or off |
+| Provider name | Display name shown on the login button |
+| Issuer URL | Base URL of your OIDC provider |
+| Client ID | OIDC client identifier |
+| Client secret | Optional — omit for public/PKCE clients |
+| Disable internal auth | When enabled, hides the local username/password login form |
+
+```http
+PATCH /api/admin/settings/oidc
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "providerName": "Pocket ID",
+  "issuerUrl": "https://pocketid.example.com",
+  "clientId": "anchor",
+  "clientSecret": "optional-secret",
+  "disableInternalAuth": false
+}
+```
+
+To remove a previously stored client secret, set `clearClientSecret: true` in the request body.

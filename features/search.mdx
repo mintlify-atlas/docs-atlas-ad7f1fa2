@@ -1,0 +1,67 @@
+---
+title: "Search"
+description: "Find notes instantly by title or content using the built-in search bar."
+---
+
+Anchor provides fast, responsive note search. On the web and mobile clients, search is triggered through a single search bar at the top of the notes list.
+
+## How search works
+
+Search in Anchor operates at two levels:
+
+<Tabs>
+  <Tab title="Client-side (primary)">
+    The web and mobile clients filter the locally cached note list as you type, without a network round-trip. This makes search feel instantaneous even on slow connections or when offline.
+
+    The local filter matches notes whose `title` or `content` contains the search string (case-insensitive).
+  </Tab>
+  <Tab title="Server-side (API)">
+    The notes list API also accepts a `search` query parameter. The server performs a case-insensitive `contains` match against both `title` and `content`:
+
+    ```
+    GET /api/notes?search=<query>
+    ```
+
+    This is used for the initial data load and for syncing search results when the local cache is empty.
+  </Tab>
+</Tabs>
+
+## Using the search bar
+
+<Steps>
+  <Step title="Click the search bar">
+    The search bar is located at the top of the notes list. Click it or press its keyboard shortcut to focus it.
+  </Step>
+  <Step title="Type your query">
+    Start typing. The note list updates immediately to show only notes whose title or content matches your query.
+  </Step>
+  <Step title="Clear the search">
+    Delete the text in the search bar or press **Escape** to return to the full notes list.
+  </Step>
+</Steps>
+
+## Search scope
+
+- Search covers **active, non-archived notes** only. Trashed and archived notes are not included in search results.
+- Search covers both notes you own and notes that have been **shared with you**.
+- Filtering by a tag and searching by text can be combined:
+  ```
+  GET /api/notes?tagId=<tag-uuid>&search=<query>
+  ```
+
+## Result ordering
+
+Search results follow the same ordering as the regular notes list: pinned notes appear first, then all results are sorted by `updatedAt` descending.
+
+## API reference
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | `string` (optional) | Case-insensitive substring match against note title and content |
+| `tagId` | `string` (optional) | Restrict results to notes with this tag |
+| `limit` | `number` (optional) | Maximum number of notes to return (1–200) |
+
+```http
+GET /api/notes?search=meeting+notes&limit=50
+Authorization: Bearer <token>
+```

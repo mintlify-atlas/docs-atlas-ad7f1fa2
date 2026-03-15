@@ -1,0 +1,109 @@
+---
+title: "Offline sync"
+description: "All writes are stored locally first and synced to the server when a connection is available."
+---
+
+Anchor is designed **offline-first**: every write operation is committed to a local database before anything is sent to the server. This means the app remains fully functional with no internet connection.
+
+## How offline-first works
+
+<Steps>
+  <Step title="Write to local database">
+    When you create or edit a note, the change is written to the local database immediately. The UI updates without waiting for a network response.
+  </Step>
+  <Step title="Queue for sync">
+    The client tracks a `lastSyncedAt` timestamp. Any note modified after that timestamp is included in the next sync payload as a `change` object.
+  </Step>
+  <Step title="Sync when online">
+    When a network connection becomes available, the client posts all pending local changes to `POST /api/notes/sync` and receives the server's changes in the same response.
+  </Step>
+  <Step title="Apply server changes">
+    The client merges the `serverChanges` returned by the sync endpoint into the local database, completing the two-way sync.
+  </Step>
+</Steps>
+
+## The sync endpoint
+
+```http
+POST /api/notes/sync
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+### Request body
+
+```json
+{
+  "lastSyncedAt": "2026-01-15T10:00:00.000Z",
+  "changes": [
+    {
+      "id": "<note-uuid>",
+      "title": "My updated note",
+      "content": "<delta-json>",
+      "isPinned": false,
+      "isArchived": false,
+      "background": "color_blue",
+      "state": "active",
+      "tagIds": ["<tag-uuid>"],
+      "updatedAt": "2026-01-15T12:30:00.000Z"
+    }
+  ]
+}
+```
+
+`lastSyncedAt` is omitted on the very first sync (initial pull). The `changes` array contains every note the client has modified since `lastSyncedAt`.
+
+### `SyncNoteDto` fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `string` | Yes | Note UUID (client-generated for new notes) |
+| `title` | `string` | Yes | Note title |
+| `content` | `string` | No | Rich text content |
+| `isPinned` | `boolean` | No | Pin state |
+| `isArchived` | `boolean` | No | Archive state |
+| `background` | `string` | No | Background ID |
+| `state` | `active` \| `trashed` \| `deleted` | No | Note lifecycle state |
+| `tagIds` | `string[]` | No | Tag UUIDs to associate |
+| `updatedAt` | `ISO 8601 string` | Yes | Client-side last-modified timestamp |
+
+### Response
+
+```json
+{
+  "serverChanges": [ /* array of note objects updated on server since lastSyncedAt */ ],
+  "revokedSharedNoteIds": [ /* note UUIDs whose shares were revoked */ ],
+  "processedIds": [ /* note IDs the server processed from the client's changes */ ],
+  "conflicts": [
+    { "noteId": "<uuid>", "resolution": "server" }
+  ],
+  "syncedAt": "2026-01-15T12:30:05.000Z"
+}
+```
+
+## Conflict resolution
+
+When the same note is modified both on the client and on the server between syncs, Anchor uses a **last-write-wins** strategy based on the `updatedAt` timestamp:
+
+| Condition | Winner | Outcome |
+|-----------|--------|---------|
+| `clientUpdatedAt` > `serverUpdatedAt` | Client | Server is overwritten with the client version |
+| `clientUpdatedAt` ≤ `serverUpdatedAt` | Server | Client change is discarded; server version is returned |
+
+The `conflicts` array in the sync response reports every note where a timestamp comparison occurred, along with whether the `"client"` or `"server"` version won.
+
+<Note>
+  Permission constraints are enforced during sync. If you have `viewer` permission on a shared note, your local edits to that note are silently skipped during sync. Only `editor` and owner changes are accepted.
+</Note>
+
+## Tags sync
+
+Tags are synced separately via `POST /api/tags/sync`, using the same `lastSyncedAt` + `changes` pattern. The tag `SyncTagsDto` includes `id`, `name`, `color`, `updatedAt`, and an `isDeleted` flag for propagating soft-deletes.
+
+## What happens when you go back online
+
+1. The connectivity layer detects a restored network connection (`connectivity_plus` on mobile).
+2. The client immediately triggers a sync cycle: tags first, then notes.
+3. Pending local writes are uploaded; server changes are downloaded and merged.
+4. The UI refreshes to reflect the fully merged state.
+5. `lastSyncedAt` is updated to the `syncedAt` value from the server response.

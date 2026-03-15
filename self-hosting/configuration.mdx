@@ -1,0 +1,77 @@
+---
+title: "Configuration"
+description: "All environment variables available for configuring your Anchor deployment."
+---
+
+Anchor is configured through environment variables. Add them to the `environment` section of your `docker-compose.yml`.
+
+```yaml
+services:
+  anchor:
+    image: ghcr.io/zhfahim/anchor:latest
+    environment:
+      - APP_URL=https://notes.example.com
+      - JWT_SECRET=your-secret-here
+    volumes:
+      - anchor_data:/data
+```
+
+<Note>
+  All environment variables are optional. Anchor works out of the box with no configuration — suitable for local or small private deployments.
+</Note>
+
+## General
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `APP_URL` | No | `http://localhost:3000` | Base URL where Anchor is served. Set this to your public URL when hosting behind a reverse proxy or when using OIDC. |
+| `JWT_SECRET` | No | (auto-generated) | Secret used to sign authentication tokens. If not set, a random secret is generated on first start and persisted to `/data` so it survives restarts. |
+
+## Database
+
+Anchor includes an embedded PostgreSQL instance. Leave `PG_HOST` empty (the default) to use it. Set `PG_HOST` to connect to an external PostgreSQL server instead.
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `PG_HOST` | No | (empty) | External PostgreSQL host. Leave empty to use the embedded database. |
+| `PG_PORT` | No | `5432` | PostgreSQL port. |
+| `PG_USER` | No | `anchor` | PostgreSQL username. |
+| `PG_PASSWORD` | No | `password` | PostgreSQL password. |
+| `PG_DATABASE` | No | `anchor` | PostgreSQL database name. |
+
+<Warning>
+  When using the embedded database, all data is stored in the `anchor_data` Docker volume. Do not remove this volume unless you intend to wipe all data.
+</Warning>
+
+## User registration
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `USER_SIGNUP` | No | (not set) | Controls who can create a new account. Accepted values: `enabled`, `disabled`, `review`. When not set, admins can change this at any time from the admin panel. |
+
+**`USER_SIGNUP` values:**
+
+- `enabled` — anyone can register a new account immediately
+- `disabled` — registration is closed; no new accounts can be created
+- `review` — new accounts are created in a pending state and must be approved by an admin before they can log in
+
+<Note>
+  Setting `USER_SIGNUP` via environment variable locks the value and prevents admins from changing it through the admin panel. Omit the variable to let admins manage it at runtime.
+</Note>
+
+## OIDC authentication
+
+See [OIDC authentication](/authentication/oidc) for setup instructions.
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `OIDC_ENABLED` | No | `false` | Set to `true` to enable OIDC login. |
+| `OIDC_PROVIDER_NAME` | No | `OIDC Provider` | Display name shown on the login button (e.g. `Pocket ID`). |
+| `OIDC_ISSUER_URL` | When OIDC enabled | — | Base URL of your OIDC provider. Used to discover provider endpoints. |
+| `OIDC_CLIENT_ID` | When OIDC enabled | — | Client ID registered with your OIDC provider. |
+| `OIDC_CLIENT_SECRET` | No | — | Client secret. Omit this for public clients (PKCE flow, no secret required). |
+| `DISABLE_INTERNAL_AUTH` | No | `false` | Set to `true` to hide the local username/password login form. Use when OIDC is the only intended login method. |
+
+<Note>
+  Setting `OIDC_ENABLED`, `OIDC_ISSUER_URL`, and `OIDC_CLIENT_ID` together locks the OIDC configuration and prevents changes through the admin panel. Omit these variables to manage OIDC from the admin UI instead.
+</Note>

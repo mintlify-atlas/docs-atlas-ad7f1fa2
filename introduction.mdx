@@ -1,0 +1,92 @@
+---
+title: "Introduction"
+description: "Anchor is an offline-first, self-hostable note-taking application built for speed, privacy, and reliability across web and mobile."
+---
+
+<CardGroup cols={2}>
+  <Card title="Quick Deploy" icon="docker" href="/self-hosting/docker">
+    Get Anchor running in minutes with Docker
+  </Card>
+  <Card title="Features" icon="star" href="/features/notes">
+    Explore rich text editing, tags, sharing, and more
+  </Card>
+  <Card title="OIDC Authentication" icon="shield" href="/authentication/oidc">
+    Connect your identity provider
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Integrate with the Anchor REST API
+  </Card>
+</CardGroup>
+
+## What is Anchor?
+
+Anchor is a note-taking application that works **offline first** — your notes are always available, even without an internet connection. When you come back online, changes sync automatically across all your devices.
+
+Anchor is self-hostable, meaning you run it on your own infrastructure. Your data never leaves your servers.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Offline first" icon="wifi-slash">
+    All edits work offline with a local database. Changes sync automatically when you reconnect.
+  </Card>
+  <Card title="Rich text editor" icon="pen-to-square">
+    Bold, italic, underline, headings, lists, checkboxes, and more — a full formatting toolkit.
+  </Card>
+  <Card title="Note sharing" icon="share-nodes">
+    Share notes with other users as a viewer or editor.
+  </Card>
+  <Card title="Tags & organization" icon="tags">
+    Organize notes with custom tags and colors. Pin important notes for quick access.
+  </Card>
+  <Card title="Backgrounds" icon="palette">
+    Customize notes with solid colors and patterns.
+  </Card>
+  <Card title="Archive & trash" icon="archive">
+    Archive notes for later or send to trash with soft-delete and recovery.
+  </Card>
+  <Card title="OIDC authentication" icon="key">
+    Sign in with Pocket ID, Authelia, Authentik, Keycloak, or any standards-compliant provider.
+  </Card>
+  <Card title="Admin panel" icon="sliders">
+    Manage users, control registration, and monitor system statistics.
+  </Card>
+</CardGroup>
+
+## Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | NestJS, PostgreSQL, Prisma |
+| Web frontend | Next.js, TypeScript |
+| Mobile | Flutter (Android) |
+| Deployment | Docker, embedded or external PostgreSQL |
+
+## Self-hosting
+
+Anchor is designed to be self-hosted. The quickest way to get started is with Docker:
+
+```yaml docker-compose.yml
+services:
+  anchor:
+    image: ghcr.io/zhfahim/anchor:latest
+    container_name: anchor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - anchor_data:/data
+
+volumes:
+  anchor_data:
+```
+
+```bash
+docker compose up -d
+```
+
+Open [http://localhost:3000](http://localhost:3000) and create your first account. See [Self Hosting with Docker](/self-hosting/docker) for the full guide.
+
+## License
+
+Anchor is licensed under the [GNU Affero General Public License v3.0 (AGPL v3)](https://github.com/zhfahim/anchor/blob/main/LICENSE).

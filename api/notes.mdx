@@ -1,0 +1,364 @@
+---
+title: "Notes"
+description: "Create, read, update, delete, archive, sync, and bulk-manage notes."
+---
+
+All notes endpoints require authentication and are served under `/api/notes`.
+
+## The note object
+
+<ResponseField name="id" type="string">Unique note ID (UUID).</ResponseField>
+<ResponseField name="title" type="string">Note title.</ResponseField>
+<ResponseField name="content" type="string">Note body content, or `null`.</ResponseField>
+<ResponseField name="isPinned" type="boolean">Whether the note is pinned.</ResponseField>
+<ResponseField name="isArchived" type="boolean">Whether the note is archived.</ResponseField>
+<ResponseField name="background" type="string">Background color or image identifier, or `null`.</ResponseField>
+<ResponseField name="state" type="string">`active`, `trashed`, or `deleted`.</ResponseField>
+<ResponseField name="userId" type="string">ID of the owning user.</ResponseField>
+<ResponseField name="createdAt" type="string">ISO 8601 creation timestamp.</ResponseField>
+<ResponseField name="updatedAt" type="string">ISO 8601 last-updated timestamp.</ResponseField>
+<ResponseField name="tags" type="object[]">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Tag ID.</ResponseField>
+    <ResponseField name="name" type="string">Tag name.</ResponseField>
+    <ResponseField name="color" type="string">Tag color or `null`.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## GET /api/notes
+
+List all active (non-trashed, non-deleted) notes for the authenticated user.
+
+<Tabs>
+  <Tab title="Query parameters">
+    <ParamField query="search" type="string">
+      Filter notes by title or content.
+    </ParamField>
+    <ParamField query="tagId" type="string">
+      Filter to notes tagged with this tag ID.
+    </ParamField>
+    <ParamField query="limit" type="number">
+      Maximum number of notes to return.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Array of note objects.
+  </Tab>
+</Tabs>
+
+```bash
+curl http://localhost:3000/api/notes \
+  -H "Authorization: Bearer <access_token>"
+
+# With filters
+curl "http://localhost:3000/api/notes?search=meeting&limit=20" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## POST /api/notes
+
+Create a new note.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="title" type="string" required>
+      Note title.
+    </ParamField>
+    <ParamField body="content" type="string">
+      Note body content.
+    </ParamField>
+    <ParamField body="isPinned" type="boolean">
+      Pin the note. Defaults to `false`.
+    </ParamField>
+    <ParamField body="isArchived" type="boolean">
+      Create the note in the archive. Defaults to `false`.
+    </ParamField>
+    <ParamField body="background" type="string">
+      Background color or image identifier.
+    </ParamField>
+    <ParamField body="tagIds" type="string[]">
+      Array of tag IDs to attach to the note.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The created note object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/notes \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Shopping list", "content": "Milk, eggs, bread", "tagIds": []}'
+```
+
+---
+
+## POST /api/notes/sync
+
+Offline-first sync endpoint. Sends local changes to the server and receives any server-side changes made since `lastSyncedAt`.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="lastSyncedAt" type="string">
+      ISO 8601 timestamp of the last successful sync. Omit to fetch all notes.
+    </ParamField>
+    <ParamField body="changes" type="object[]">
+      Array of note changes to apply.
+      <Expandable title="SyncNoteDto properties">
+        <ParamField body="id" type="string" required>
+          Note ID. If it does not exist on the server, a new note is created.
+        </ParamField>
+        <ParamField body="title" type="string" required>
+          Note title.
+        </ParamField>
+        <ParamField body="content" type="string">
+          Note body content.
+        </ParamField>
+        <ParamField body="isPinned" type="boolean">
+          Pinned state.
+        </ParamField>
+        <ParamField body="isArchived" type="boolean">
+          Archived state.
+        </ParamField>
+        <ParamField body="background" type="string">
+          Background identifier.
+        </ParamField>
+        <ParamField body="state" type="string">
+          `active`, `trashed`, or `deleted`.
+        </ParamField>
+        <ParamField body="tagIds" type="string[]">
+          Tag IDs to attach.
+        </ParamField>
+        <ParamField body="updatedAt" type="string" required>
+          ISO 8601 client-side last-modified timestamp used for conflict resolution.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="notes" type="object[]">
+      All notes updated on the server since `lastSyncedAt`.
+    </ResponseField>
+    <ResponseField name="syncedAt" type="string">
+      ISO 8601 timestamp to use as `lastSyncedAt` in the next sync call.
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/notes/sync \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"lastSyncedAt": "2024-03-10T09:00:00.000Z", "changes": []}'
+```
+
+---
+
+## GET /api/notes/trash
+
+List all notes in the trash (state = `trashed`) for the authenticated user.
+
+```bash
+curl http://localhost:3000/api/notes/trash \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## GET /api/notes/archive
+
+List all archived notes (`isArchived = true`) for the authenticated user.
+
+```bash
+curl http://localhost:3000/api/notes/archive \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## GET /api/notes/:id
+
+Fetch a single note by ID. The note must belong to the authenticated user or be shared with them.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    A single note object.
+  </Tab>
+</Tabs>
+
+```bash
+curl http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## PATCH /api/notes/:id
+
+Update one or more fields on an existing note. All fields are optional.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Request body">
+    <ParamField body="title" type="string">
+      New title.
+    </ParamField>
+    <ParamField body="content" type="string">
+      New content.
+    </ParamField>
+    <ParamField body="isPinned" type="boolean">
+      Pinned state.
+    </ParamField>
+    <ParamField body="isArchived" type="boolean">
+      Archived state.
+    </ParamField>
+    <ParamField body="background" type="string">
+      Background identifier.
+    </ParamField>
+    <ParamField body="tagIds" type="string[]">
+      Full replacement list of tag IDs.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated note object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X PATCH http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001 \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"isPinned": true}'
+```
+
+---
+
+## DELETE /api/notes/:id
+
+Soft-delete a note by moving it to the trash (sets `state` to `trashed`). The note can be restored.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated note object with `state: "trashed"`.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X DELETE http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## PATCH /api/notes/:id/restore
+
+Restore a trashed note back to `active` state.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The restored note object with `state: "active"`.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X PATCH http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001/restore \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## DELETE /api/notes/:id/permanent
+
+Permanently delete a note. This action is irreversible.
+
+<Warning>
+Permanent deletion cannot be undone. The note and all associated shares are removed from the database.
+</Warning>
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The deleted note object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X DELETE http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001/permanent \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## POST /api/notes/bulk/delete
+
+Move multiple notes to the trash in a single request.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="noteIds" type="string[]" required>
+      Array of note IDs to trash. All IDs must belong to the authenticated user.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Array of updated note objects.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/notes/bulk/delete \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"noteIds": ["id-1", "id-2", "id-3"]}'
+```
+
+---
+
+## POST /api/notes/bulk/archive
+
+Archive multiple notes in a single request.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="noteIds" type="string[]" required>
+      Array of note IDs to archive. All IDs must belong to the authenticated user.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Array of updated note objects.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/notes/bulk/archive \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"noteIds": ["id-1", "id-2"]}'
+```

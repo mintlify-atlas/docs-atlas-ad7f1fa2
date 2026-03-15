@@ -1,0 +1,92 @@
+---
+title: "Tags"
+description: "Organize notes with custom color-coded tags that are private to each user."
+---
+
+Tags are labels you attach to notes to group and filter them. Every tag belongs to a single user — tags are never shared across accounts, even when a note is shared.
+
+## Tag data model
+
+The `Tag` model in the database has the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `String` (UUID) | Unique identifier |
+| `name` | `String` | Display name — unique per user |
+| `color` | `String?` | Optional color string (e.g. a hex code) |
+| `isDeleted` | `Boolean` | Soft-delete flag |
+| `userId` | `String` | Owner of the tag |
+| `createdAt` | `DateTime` | Creation timestamp |
+| `updatedAt` | `DateTime` | Last-updated timestamp |
+
+The `(userId, name)` pair has a unique constraint, so two tags with the same name cannot coexist for the same user.
+
+## Creating a tag
+
+<Steps>
+  <Step title="Open the Tags panel">
+    Click **Tags** in the sidebar to expand the tag list.
+  </Step>
+  <Step title="Create a new tag">
+    Click the **+** button next to the Tags heading. Enter a name for the tag.
+  </Step>
+  <Step title="Choose a color (optional)">
+    Select a color for the tag. The color is stored as a free-form string — any valid CSS color value is accepted.
+  </Step>
+  <Step title="Save">
+    Confirm to create the tag. It is immediately available to attach to notes.
+  </Step>
+</Steps>
+
+<Note>
+  Tag names must be unique within your account. Attempting to create a second tag with the same name returns a `409 Conflict` error.
+</Note>
+
+## Applying tags to notes
+
+Open a note and use the tag picker in the note toolbar to attach one or more tags. Tags are stored as a many-to-many relation between `Note` and `Tag`. You can apply any number of tags from your own tag library to a note.
+
+When editing a note via the API, pass `tagIds` as an array of tag UUIDs:
+
+```json
+{
+  "tagIds": ["<tag-uuid-1>", "<tag-uuid-2>"]
+}
+```
+
+Setting `tagIds` replaces all existing tags on the note in a single operation.
+
+## Filtering notes by tag
+
+To view only notes with a specific tag, click the tag name in the sidebar. This navigates to a filtered view that calls:
+
+```
+GET /api/notes?tagId=<tag-uuid>
+```
+
+Alternatively, you can combine tag filtering with a search query:
+
+```
+GET /api/notes?tagId=<tag-uuid>&search=<query>
+```
+
+You can also fetch all notes for a tag directly:
+
+```
+GET /api/tags/:id/notes
+```
+
+This endpoint returns only `active`, non-archived notes that belong to you and carry the specified tag.
+
+## User-scoped isolation
+
+Tags are strictly user-scoped:
+
+- The API enforces that `tag.userId === currentUser.id` on every read, update, and delete.
+- When a note is shared with another user, the recipient sees the note's tags as defined by the owner. The recipient's own tag library is separate and does not include the owner's tags.
+- Deleting a user cascade-deletes all of that user's tags.
+
+## Renaming and deleting tags
+
+- **Rename**: Open the tag context menu and select **Edit**. Renaming checks for name conflicts against other tags owned by the same user.
+- **Delete**: Selecting **Delete** soft-deletes the tag (`isDeleted: true`). The tag is removed from the sidebar and no longer returned by the list endpoint. Soft-deleted tags are purged from the database after a 30-day retention window.

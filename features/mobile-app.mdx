@@ -1,0 +1,98 @@
+---
+title: "Mobile app"
+description: "Anchor's Android app is a full offline-first client built with Flutter."
+---
+
+The Anchor mobile app is built with **Flutter** and provides the full Anchor experience — rich text editing, offline support, tags, sharing, and OIDC login — on Android.
+
+## Downloading the app
+
+Android APKs are published with every release on the [GitHub Releases page](https://github.com/zhfahim/anchor/releases).
+
+<Steps>
+  <Step title="Visit the releases page">
+    Go to [github.com/zhfahim/anchor/releases](https://github.com/zhfahim/anchor/releases) and find the latest release.
+  </Step>
+  <Step title="Choose an APK variant">
+    Download one of the APK files attached to the release:
+
+    | APK filename | Description |
+    |--------------|-------------|
+    | `anchor-{version}.apk` | **Universal APK** — recommended for most devices; works on all CPU architectures |
+    | `anchor-{version}-arm64-v8a.apk` | Optimized for 64-bit ARM devices (most modern Android phones) |
+    | `anchor-{version}-armeabi-v7a.apk` | For older 32-bit ARM devices |
+    | `anchor-{version}-x86_64.apk` | For x86_64 devices and emulators |
+
+    <Tip>
+      Unless you need a smaller download, choose the Universal APK. Architecture-specific APKs are smaller but work only on their target CPU.
+    </Tip>
+  </Step>
+  <Step title="Install the APK">
+    Transfer the APK to your device and install it. You may need to enable **Install from unknown sources** in your Android settings.
+  </Step>
+</Steps>
+
+## Connecting to your Anchor instance
+
+<Steps>
+  <Step title="Open the app">
+    Launch Anchor on your device. The login screen asks for your server URL.
+  </Step>
+  <Step title="Enter your server URL">
+    Type the base URL of your self-hosted Anchor instance, for example `https://notes.example.com`.
+  </Step>
+  <Step title="Sign in">
+    Log in with your Anchor username and password, or use OIDC if it is configured on your server (see below).
+  </Step>
+</Steps>
+
+## OIDC login on mobile
+
+The mobile app supports OIDC authentication using the **public client (PKCE)** flow — no client secret is required or used on the device.
+
+<Steps>
+  <Step title="Configure your OIDC provider">
+    In your OIDC provider (Pocket ID, Authelia, Authentik, Keycloak, etc.), create a **public client** (PKCE) and add the following redirect URI:
+
+    ```
+    anchor://oidc/callback
+    ```
+  </Step>
+  <Step title="Configure Anchor">
+    Set up OIDC on your Anchor server using environment variables or the admin panel. Leave `OIDC_CLIENT_SECRET` empty to use PKCE mode:
+
+    ```yaml
+    OIDC_ENABLED: true
+    OIDC_ISSUER_URL: https://auth.example.com
+    OIDC_CLIENT_ID: anchor-mobile
+    # OIDC_CLIENT_SECRET intentionally omitted for public/PKCE client
+    ```
+  </Step>
+  <Step title="Sign in from the app">
+    On the mobile login screen, tap the OIDC provider button. The app opens a browser session via `flutter_appauth`, completes the PKCE flow, and returns to the app with a session token.
+  </Step>
+</Steps>
+
+<Note>
+  The web app and mobile app can share the same OIDC client if it is configured as a public client, or you can create separate clients for each. The web callback URL is `{APP_URL}/api/auth/oidc/callback`.
+</Note>
+
+## Offline support
+
+The mobile app is fully offline-first. Notes and tags are stored in a local **SQLite** database managed by **Drift** (a Flutter SQLite library). All reads and writes hit the local database first.
+
+Syncing happens automatically when a connection is available, detected via **connectivity\_plus**. See [Offline sync](/features/offline-sync) for full details on the sync protocol.
+
+## Key dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `flutter_quill` | Rich text editor |
+| `drift` + `sqlite3_flutter_libs` | Local SQLite database |
+| `flutter_riverpod` | State management |
+| `dio` | HTTP networking |
+| `go_router` | In-app navigation |
+| `flutter_appauth` | OIDC / OAuth2 PKCE flow |
+| `connectivity_plus` | Network state detection |
+| `flutter_secure_storage` | Secure credential storage |
+| `flutter_staggered_grid_view` | Masonry note grid layout |

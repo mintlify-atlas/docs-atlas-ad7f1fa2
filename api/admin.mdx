@@ -1,0 +1,358 @@
+---
+title: "Admin API"
+description: "Manage users, view system statistics, and configure instance settings. Requires admin privileges."
+---
+
+<Warning>
+All endpoints on this page require the authenticated user to have `isAdmin: true`. Requests from non-admin users return `403 Forbidden`.
+</Warning>
+
+Admin endpoints are served under `/api/admin`.
+
+---
+
+## System statistics
+
+### GET /api/admin/stats
+
+Return aggregate statistics for the instance.
+
+```bash
+curl http://localhost:3000/api/admin/stats \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response:** An object containing instance-wide counts (total users, notes, etc.).
+
+---
+
+## User management
+
+### GET /api/admin/users
+
+List all users with optional pagination.
+
+<Tabs>
+  <Tab title="Query parameters">
+    <ParamField query="skip" type="number" default="0">
+      Number of records to skip (offset).
+    </ParamField>
+    <ParamField query="take" type="number" default="50">
+      Maximum number of records to return.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="users" type="object[]">
+      Array of user objects.
+      <Expandable title="User properties">
+        <ResponseField name="id" type="string">User ID.</ResponseField>
+        <ResponseField name="email" type="string">Email address.</ResponseField>
+        <ResponseField name="name" type="string">Display name.</ResponseField>
+        <ResponseField name="isAdmin" type="boolean">Admin flag.</ResponseField>
+        <ResponseField name="status" type="string">`active` or `pending`.</ResponseField>
+        <ResponseField name="profileImage" type="string">Profile image URL or `null`.</ResponseField>
+        <ResponseField name="createdAt" type="string">ISO 8601 timestamp.</ResponseField>
+        <ResponseField name="updatedAt" type="string">ISO 8601 timestamp.</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="total" type="number">
+      Total number of users in the system.
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+```bash
+curl "http://localhost:3000/api/admin/users?skip=0&take=25" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+### GET /api/admin/users/pending
+
+Return all users with `status: "pending"` who are awaiting approval.
+
+```bash
+curl http://localhost:3000/api/admin/users/pending \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+### POST /api/admin/users
+
+Create a new user account directly, bypassing registration mode restrictions.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="email" type="string" required>
+      Valid email address. Must be unique.
+    </ParamField>
+    <ParamField body="password" type="string" required>
+      Minimum 8 characters.
+    </ParamField>
+    <ParamField body="name" type="string" required>
+      Display name, maximum 100 characters.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The created user object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/admin/users \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "new@example.com", "password": "securepass1", "name": "Bob"}'
+```
+
+---
+
+### PATCH /api/admin/users/:id
+
+Update a user's email, display name, or admin status.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      User ID to update.
+    </ParamField>
+  </Tab>
+  <Tab title="Request body">
+    <ParamField body="email" type="string">
+      New email address.
+    </ParamField>
+    <ParamField body="name" type="string">
+      New display name.
+    </ParamField>
+    <ParamField body="isAdmin" type="boolean">
+      Grant or revoke admin privileges.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated user object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X PATCH http://localhost:3000/api/admin/users/user-id-here \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"isAdmin": true}'
+```
+
+---
+
+### DELETE /api/admin/users/:id
+
+Permanently delete a user and all their data.
+
+<Warning>
+This action is irreversible. All notes, tags, and shares owned by the user are deleted.
+</Warning>
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      User ID to delete.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The deleted user object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X DELETE http://localhost:3000/api/admin/users/user-id-here \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+### POST /api/admin/users/:id/reset-password
+
+Set a new password for a user without requiring their current password.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      User ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Request body">
+    <ParamField body="newPassword" type="string">
+      New password, minimum 8 characters. Optional — if omitted, a random password may be generated depending on the service implementation.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Returns `200 OK` on success.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/admin/users/user-id-here/reset-password \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"newPassword": "newpass123"}'
+```
+
+---
+
+### POST /api/admin/users/:id/approve
+
+Approve a pending user, setting their `status` to `active`.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      User ID to approve.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated user object with `status: "active"`.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/admin/users/user-id-here/approve \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+### POST /api/admin/users/:id/reject
+
+Reject a pending user registration.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      User ID to reject.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated user object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/admin/users/user-id-here/reject \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## Registration settings
+
+### GET /api/admin/settings/registration
+
+Return the current registration mode and its source.
+
+```bash
+curl http://localhost:3000/api/admin/settings/registration \
+  -H "Authorization: Bearer <access_token>"
+```
+
+<Tabs>
+  <Tab title="Response">
+    <ResponseField name="mode" type="string">
+      `enabled`, `disabled`, or `review`.
+    </ResponseField>
+    <ResponseField name="isLocked" type="boolean">
+      `true` if the mode is set by the `USER_SIGNUP` environment variable and cannot be changed via the API.
+    </ResponseField>
+    <ResponseField name="source" type="string">
+      `env`, `database`, or `default`.
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+---
+
+### PATCH /api/admin/settings/registration
+
+Update the registration mode. Fails with `403` if the mode is locked by the `USER_SIGNUP` environment variable.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="mode" type="string" required>
+      One of `enabled`, `disabled`, or `review`.
+
+      - `enabled` — anyone can register.
+      - `disabled` — registration is closed.
+      - `review` — new accounts require admin approval before they can log in.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Returns `200 OK` on success.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X PATCH http://localhost:3000/api/admin/settings/registration \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "review"}'
+```
+
+---
+
+## OIDC settings
+
+### GET /api/admin/settings/oidc
+
+Return the current OIDC configuration.
+
+```bash
+curl http://localhost:3000/api/admin/settings/oidc \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+### PATCH /api/admin/settings/oidc
+
+Update OIDC provider settings.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="enabled" type="boolean">
+      Enable or disable OIDC login.
+    </ParamField>
+    <ParamField body="providerName" type="string">
+      Display name for the OIDC provider (shown on the login page).
+    </ParamField>
+    <ParamField body="issuerUrl" type="string">
+      OIDC issuer URL (must be a valid URL).
+    </ParamField>
+    <ParamField body="clientId" type="string">
+      OAuth 2.0 client ID.
+    </ParamField>
+    <ParamField body="clientSecret" type="string">
+      OAuth 2.0 client secret.
+    </ParamField>
+    <ParamField body="clearClientSecret" type="boolean">
+      Set to `true` to remove the stored client secret.
+    </ParamField>
+    <ParamField body="disableInternalAuth" type="boolean">
+      When `true`, email/password login is disabled and users must authenticate via OIDC.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated OIDC settings object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X PATCH http://localhost:3000/api/admin/settings/oidc \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "providerName": "Google",
+    "issuerUrl": "https://accounts.google.com",
+    "clientId": "my-client-id",
+    "clientSecret": "my-client-secret"
+  }'
+```

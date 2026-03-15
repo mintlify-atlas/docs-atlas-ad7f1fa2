@@ -1,0 +1,129 @@
+---
+title: "Notes"
+description: "Create, format, organize, and manage notes in Anchor."
+---
+
+Notes are the core of Anchor. Every note has a title, rich text content, and optional metadata such as a background, tags, pinned state, and archive state.
+
+## Creating a note
+
+<Steps>
+  <Step title="Open the note editor">
+    Click the **New note** button in the top-left of the notes list. A blank note opens immediately in the editor.
+  </Step>
+  <Step title="Enter a title">
+    Type a title in the title field at the top of the editor. The title is required.
+  </Step>
+  <Step title="Write your content">
+    Click into the body area and start typing. The editor supports rich text formatting (see below).
+  </Step>
+  <Step title="Save">
+    Changes are saved automatically as you type. On the web app, saves are sent to the server in real time. On mobile, writes go to the local database first and sync when online.
+  </Step>
+</Steps>
+
+## Rich text formatting
+
+Anchor uses a **Quill**-based rich text editor on web and **flutter\_quill** on mobile. The toolbar exposes the following formatting options:
+
+<CardGroup cols={2}>
+  <Card title="Inline styles">
+    **Bold**, *italic*, and underline — applied to selected text via the toolbar or keyboard shortcuts.
+  </Card>
+  <Card title="Headings">
+    Heading 1 and Heading 2 block-level headings for structuring longer notes.
+  </Card>
+  <Card title="Lists">
+    Ordered (numbered) and unordered (bulleted) lists. Press `Enter` to add a new item, `Tab` to indent.
+  </Card>
+  <Card title="Checkboxes">
+    Interactive checkbox lists for tasks and to-do items. Click a checkbox to toggle its state.
+  </Card>
+</CardGroup>
+
+## Note backgrounds
+
+Each note can have a background applied to give it a distinct visual identity. Backgrounds adapt to light and dark mode automatically.
+
+<Tabs>
+  <Tab title="Solid colors">
+    | ID | Light color | Dark color |
+    |----|-------------|------------|
+    | `color_red` | `#FFEBEE` | `#331D21` |
+    | `color_orange` | `#FFE8D6` | `#3D2A1A` |
+    | `color_yellow` | `#FFF9DC` | `#3A3A1A` |
+    | `color_green` | `#E8F5E9` | `#1B3022` |
+    | `color_teal` | `#E0F7FA` | `#193135` |
+    | `color_blue` | `#E3F2FD` | `#192A3A` |
+    | `color_dark_blue` | `#E8EAF6` | `#1A1F3A` |
+    | `color_purple` | `#F3E5F5` | `#2D1D31` |
+    | `color_pink` | `#FCE4EC` | `#331D21` |
+    | `color_brown` | `#EFEBE9` | `#2E1F1A` |
+  </Tab>
+  <Tab title="Patterns">
+    | ID | Base light color | Base dark color |
+    |----|------------------|-----------------|
+    | `pattern_dots` | `#F5F5F5` | `#1E1E1E` |
+    | `pattern_grid` | `#FFF9DC` | `#3A3A1A` |
+    | `pattern_lines` | `#E3F2FD` | `#192A3A` |
+    | `pattern_waves` | `#E8F5E9` | `#1B3022` |
+    | `pattern_groceries` | `#FFEBEE` | `#331D21` |
+    | `pattern_music` | `#F3E5F5` | `#2D1D31` |
+    | `pattern_travel` | `#E0F7FA` | `#193135` |
+    | `pattern_code` | `#ECEFF1` | `#1E2325` |
+  </Tab>
+</Tabs>
+
+To remove a background, select the **Default** (no background) option in the background picker.
+
+## Pinning notes
+
+Pinning a note moves it to the top of the notes list, above all unpinned notes. Pinned notes are sorted by `updatedAt` descending among themselves.
+
+To pin or unpin a note, open the note's context menu (the three-dot menu on a note card) and toggle **Pin note**.
+
+<Tip>
+  Use pinning for a small number of high-priority notes. Pinning many notes reduces its usefulness because all pinned notes appear before any unpinned ones.
+</Tip>
+
+## Archiving notes
+
+Archiving removes a note from the main list without deleting it. Archived notes are accessible from the **Archive** section in the sidebar.
+
+- Archived notes have `isArchived: true` and `state: active`.
+- Archiving does not move a note to the trash.
+- To unarchive, open the Archive section and use the context menu on the note.
+
+## Trash and recovery
+
+Deleting a note is a two-step process. A soft delete first moves the note to the **Trash**; a second explicit action permanently deletes it.
+
+<Steps>
+  <Step title="Move to trash (soft delete)">
+    Select **Delete** from a note's context menu. The note's `state` changes to `trashed` and it disappears from the main list.
+  </Step>
+  <Step title="View the trash">
+    Open the **Trash** section in the sidebar to see all trashed notes.
+  </Step>
+  <Step title="Restore a note">
+    From the Trash view, select **Restore** on a note. Its `state` returns to `active` and it reappears in the main list.
+  </Step>
+  <Step title="Permanently delete">
+    To remove a note completely, select **Delete permanently** from the Trash view. This sets `state` to `deleted` (a tombstone record used for sync). Tombstone records older than 30 days are automatically purged from the database.
+  </Step>
+</Steps>
+
+<Warning>
+  Permanent deletion cannot be undone. The note and all its shares are removed once the tombstone is purged.
+</Warning>
+
+## Bulk actions
+
+You can act on multiple notes at once from the notes list.
+
+| Action | Description | API endpoint |
+|--------|-------------|-------------|
+| **Bulk delete** | Moves selected notes to the trash | `POST /api/notes/bulk/delete` |
+| **Bulk archive** | Archives all selected notes at once | `POST /api/notes/bulk/archive` |
+
+Both bulk actions accept a `noteIds` array and only operate on notes you own. Shared notes you do not own are not eligible for bulk delete or bulk archive.

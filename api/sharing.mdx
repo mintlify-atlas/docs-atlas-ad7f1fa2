@@ -1,0 +1,137 @@
+---
+title: "Note sharing"
+description: "Share notes with other users and manage their access permissions."
+---
+
+Note sharing endpoints require authentication and sit under `/api/notes/:id/shares`. Only the note owner can manage shares.
+
+## Permissions
+
+The `NoteSharePermission` enum controls what a shared user can do:
+
+| Value | Description |
+|-------|-------------|
+| `viewer` | Can read the note but cannot edit it. |
+| `editor` | Can read and edit the note. |
+
+## The NoteShare object
+
+<ResponseField name="id" type="string">Unique share ID (UUID).</ResponseField>
+<ResponseField name="noteId" type="string">ID of the shared note.</ResponseField>
+<ResponseField name="sharedWithUserId" type="string">ID of the user the note is shared with.</ResponseField>
+<ResponseField name="sharedByUserId" type="string">ID of the user who created the share.</ResponseField>
+<ResponseField name="permission" type="string">`viewer` or `editor`.</ResponseField>
+<ResponseField name="isDeleted" type="boolean">Soft-delete flag.</ResponseField>
+<ResponseField name="createdAt" type="string">ISO 8601 creation timestamp.</ResponseField>
+<ResponseField name="updatedAt" type="string">ISO 8601 last-updated timestamp.</ResponseField>
+
+---
+
+## POST /api/notes/:id/shares
+
+Share a note with another user.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID to share.
+    </ParamField>
+  </Tab>
+  <Tab title="Request body">
+    <ParamField body="sharedWithUserId" type="string" required>
+      The ID of the user to share the note with.
+    </ParamField>
+    <ParamField body="permission" type="string" required>
+      `viewer` or `editor`.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The created NoteShare object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001/shares \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"sharedWithUserId": "user-id-here", "permission": "viewer"}'
+```
+
+---
+
+## GET /api/notes/:id/shares
+
+List all active shares for a note.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Array of NoteShare objects.
+  </Tab>
+</Tabs>
+
+```bash
+curl http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001/shares \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## PATCH /api/notes/:id/shares/:shareId
+
+Update the permission level of an existing share.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID.
+    </ParamField>
+    <ParamField path="shareId" type="string" required>
+      Share ID to update.
+    </ParamField>
+  </Tab>
+  <Tab title="Request body">
+    <ParamField body="permission" type="string" required>
+      New permission level: `viewer` or `editor`.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated NoteShare object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X PATCH http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001/shares/share-id-here \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"permission": "editor"}'
+```
+
+---
+
+## DELETE /api/notes/:id/shares/:shareId
+
+Revoke a share, removing the shared user's access to the note.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Note ID.
+    </ParamField>
+    <ParamField path="shareId" type="string" required>
+      Share ID to revoke.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The revoked NoteShare object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X DELETE http://localhost:3000/api/notes/e3d2f1a0-1234-5678-abcd-000000000001/shares/share-id-here \
+  -H "Authorization: Bearer <access_token>"
+```

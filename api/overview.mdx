@@ -1,0 +1,85 @@
+---
+title: "API overview"
+description: "Base URL, authentication, response format, and error codes for the Anchor REST API."
+---
+
+The Anchor API is a JSON REST API. All endpoints are served under the base URL:
+
+```
+{APP_URL}/api
+```
+
+The default base URL when running locally is `http://localhost:3000/api`.
+
+## Authentication
+
+Most endpoints require a valid JWT access token. Pass the token in the `Authorization` header using the `Bearer` scheme:
+
+```http
+Authorization: Bearer <token>
+```
+
+Obtain an access token by calling [POST /api/auth/login](/api/auth#login) or [POST /api/auth/register](/api/auth#register). The login response includes both an `access_token` (short-lived JWT) and a `refresh_token` (long-lived, single-use).
+
+### API tokens
+
+Each user can also hold a static `apiToken` for programmatic or scripted access. API tokens are managed through the `/api/auth/api-token` endpoints and can be passed in the same `Authorization: Bearer` header in place of a JWT.
+
+<Tip>
+Use API tokens for long-running scripts and integrations. Use JWT access tokens for interactive sessions.
+</Tip>
+
+## Response format
+
+All responses are JSON. Successful responses return the requested resource or an array of resources at the top level. There is no wrapper envelope.
+
+```json
+{
+  "id": "e3d2f1a0-...",
+  "title": "Meeting notes",
+  "createdAt": "2024-03-15T10:30:00.000Z"
+}
+```
+
+## Common error codes
+
+| Status | Meaning |
+|--------|---------|
+| `400 Bad Request` | The request body or query parameters failed validation. |
+| `401 Unauthorized` | No token was provided, or the token is expired or invalid. |
+| `403 Forbidden` | The authenticated user lacks permission to perform the action. |
+| `404 Not Found` | The requested resource does not exist or is not visible to the user. |
+
+Error responses include a machine-readable body:
+
+```json
+{
+  "statusCode": 404,
+  "message": "Note not found",
+  "error": "Not Found"
+}
+```
+
+## Rate limiting
+
+The API does not enforce rate limiting by default.
+
+## Endpoint reference
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/auth">
+    Register, log in, manage tokens, update your profile, and use OIDC single sign-on.
+  </Card>
+  <Card title="Notes" icon="file-text" href="/api/notes">
+    Create, read, update, delete, archive, and sync notes.
+  </Card>
+  <Card title="Tags" icon="tag" href="/api/tags">
+    Manage labels that can be attached to notes.
+  </Card>
+  <Card title="Note sharing" icon="share-2" href="/api/sharing">
+    Share individual notes with other users and control their permissions.
+  </Card>
+  <Card title="Admin API" icon="shield" href="/api/admin">
+    Manage users, view system statistics, and configure instance settings.
+  </Card>
+</CardGroup>

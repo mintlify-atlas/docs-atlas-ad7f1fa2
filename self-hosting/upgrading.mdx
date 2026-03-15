@@ -1,0 +1,56 @@
+---
+title: "Upgrading"
+description: "How to update your Anchor deployment to the latest version."
+---
+
+Anchor uses Docker image tags to manage versions. The `latest` tag always points to the most recent stable release.
+
+## Upgrade steps
+
+<Steps>
+  <Step title="Pull the latest image">
+    ```bash
+    docker compose pull
+    ```
+
+    This downloads the newest `ghcr.io/zhfahim/anchor:latest` image without stopping the running container.
+  </Step>
+
+  <Step title="Restart the container">
+    ```bash
+    docker compose up -d
+    ```
+
+    Docker replaces the running container with a new one using the updated image.
+  </Step>
+</Steps>
+
+You can chain both commands together for a one-liner:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+## Data persistence
+
+Your notes, users, and settings are stored in the `anchor_data` Docker volume — not inside the container image. The volume is unaffected by image updates, so no data is lost when you upgrade.
+
+## Database migrations
+
+Anchor runs database migrations automatically on every startup. When the new container starts after an upgrade, any schema changes required by the new version are applied before the application begins accepting requests.
+
+<Note>
+  You do not need to run any manual migration commands. The process is fully automatic.
+</Note>
+
+## Pinning a specific version
+
+If you need a specific release instead of `latest`, update the `image` field in your `docker-compose.yml`:
+
+```yaml
+services:
+  anchor:
+    image: ghcr.io/zhfahim/anchor:v1.2.3
+```
+
+Replace `v1.2.3` with the desired tag from the [GitHub releases page](https://github.com/zhfahim/anchor/releases).

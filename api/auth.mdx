@@ -1,0 +1,393 @@
+---
+title: "Authentication"
+description: "Register, log in, refresh tokens, manage your profile, and use OIDC single sign-on."
+---
+
+All auth endpoints are served under `/api/auth`.
+
+---
+
+## GET /api/auth/registration-mode
+
+Returns the current registration mode for the instance. This is a public endpoint — no authentication required.
+
+<Tabs>
+  <Tab title="Request">
+    No request body or query parameters.
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="mode" type="string" required>
+      One of `enabled`, `disabled`, or `review`.
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+```bash
+curl http://localhost:3000/api/auth/registration-mode
+```
+
+---
+
+## POST /api/auth/register
+
+Create a new user account. Subject to the instance registration mode.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="email" type="string" required>
+      Valid email address. Must be unique.
+    </ParamField>
+    <ParamField body="password" type="string" required>
+      Minimum 8 characters.
+    </ParamField>
+    <ParamField body="name" type="string" required>
+      Display name, maximum 100 characters.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Returns the created user object.
+
+    <ResponseField name="id" type="string">
+      Unique user ID (UUID).
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      The user's email address.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      The user's display name.
+    </ResponseField>
+    <ResponseField name="isAdmin" type="boolean">
+      Whether the user has admin privileges.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      `active` or `pending`.
+    </ResponseField>
+    <ResponseField name="profileImage" type="string">
+      URL of the user's profile image, or `null`.
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp.
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 timestamp.
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "s3cr3tpass", "name": "Alice"}'
+```
+
+---
+
+## POST /api/auth/login
+
+Authenticate with email and password. Returns a JWT access token and a refresh token.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="email" type="string" required>
+      The account email address.
+    </ParamField>
+    <ParamField body="password" type="string" required>
+      The account password.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="access_token" type="string">
+      Short-lived JWT. Pass in `Authorization: Bearer` for authenticated requests.
+    </ResponseField>
+    <ResponseField name="refresh_token" type="string">
+      Long-lived single-use token. Use with `/api/auth/refresh` to obtain a new access token.
+    </ResponseField>
+    <ResponseField name="user" type="object">
+      <Expandable title="properties">
+        <ResponseField name="id" type="string">User ID.</ResponseField>
+        <ResponseField name="email" type="string">Email address.</ResponseField>
+        <ResponseField name="name" type="string">Display name.</ResponseField>
+        <ResponseField name="isAdmin" type="boolean">Admin flag.</ResponseField>
+        <ResponseField name="status" type="string">`active` or `pending`.</ResponseField>
+        <ResponseField name="profileImage" type="string">Profile image URL or `null`.</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "s3cr3tpass"}'
+```
+
+---
+
+## POST /api/auth/refresh
+
+Exchange a refresh token for a new access token and refresh token pair. The previous refresh token is invalidated.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="refresh_token" type="string" required>
+      A valid, unused refresh token.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="access_token" type="string">
+      New JWT access token.
+    </ResponseField>
+    <ResponseField name="refresh_token" type="string">
+      New refresh token. The previous token is now invalid.
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": "<your_refresh_token>"}'
+```
+
+---
+
+## POST /api/auth/logout
+
+Invalidate a refresh token. The access token remains valid until it expires naturally.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="refreshToken" type="string">
+      The refresh token to revoke. Optional — if omitted, the request succeeds silently.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Returns `204 No Content` on success.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/auth/logout \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "<your_refresh_token>"}'
+```
+
+---
+
+## GET /api/auth/me
+
+**Requires authentication.**
+
+Return the profile of the currently authenticated user.
+
+<Tabs>
+  <Tab title="Request">
+    No request body or query parameters.
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="id" type="string">User ID.</ResponseField>
+    <ResponseField name="email" type="string">Email address.</ResponseField>
+    <ResponseField name="name" type="string">Display name.</ResponseField>
+    <ResponseField name="profileImage" type="string">Profile image URL or `null`.</ResponseField>
+    <ResponseField name="apiToken" type="string">Static API token or `null`.</ResponseField>
+    <ResponseField name="isAdmin" type="boolean">Admin flag.</ResponseField>
+    <ResponseField name="status" type="string">`active` or `pending`.</ResponseField>
+    <ResponseField name="oidcSubject" type="string">OIDC subject identifier or `null`.</ResponseField>
+    <ResponseField name="createdAt" type="string">ISO 8601 timestamp.</ResponseField>
+    <ResponseField name="updatedAt" type="string">ISO 8601 timestamp.</ResponseField>
+  </Tab>
+</Tabs>
+
+```bash
+curl http://localhost:3000/api/auth/me \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## PATCH /api/auth/profile
+
+**Requires authentication.**
+
+Update the display name of the currently authenticated user.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="name" type="string">
+      New display name, maximum 100 characters. Leading/trailing whitespace is trimmed.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Returns the updated user object (same shape as `GET /api/auth/me`).
+  </Tab>
+</Tabs>
+
+```bash
+curl -X PATCH http://localhost:3000/api/auth/profile \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice Smith"}'
+```
+
+---
+
+## POST /api/auth/profile/image
+
+**Requires authentication.**
+
+Upload a profile image. The request must be `multipart/form-data` with the file in a field named `image`.
+
+- Maximum file size: **5 MB**
+- Accepted types: `image/jpeg`, `image/png`, `image/webp`
+
+```bash
+curl -X POST http://localhost:3000/api/auth/profile/image \
+  -H "Authorization: Bearer <access_token>" \
+  -F "image=@/path/to/photo.jpg"
+```
+
+---
+
+## DELETE /api/auth/profile/image
+
+**Requires authentication.**
+
+Remove the current user's profile image.
+
+```bash
+curl -X DELETE http://localhost:3000/api/auth/profile/image \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## POST /api/auth/change-password
+
+**Requires authentication.**
+
+Change the password for the currently authenticated user.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="currentPassword" type="string" required>
+      The user's existing password.
+    </ParamField>
+    <ParamField body="newPassword" type="string" required>
+      The new password. Minimum 8 characters.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Returns `200 OK` on success.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/auth/change-password \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"currentPassword": "old_pass", "newPassword": "new_pass_123"}'
+```
+
+---
+
+## API token management
+
+All three endpoints below require authentication.
+
+### GET /api/auth/api-token
+
+Retrieve the current user's static API token.
+
+```bash
+curl http://localhost:3000/api/auth/api-token \
+  -H "Authorization: Bearer <access_token>"
+```
+
+### POST /api/auth/api-token/regenerate
+
+Generate a new API token, invalidating the previous one.
+
+```bash
+curl -X POST http://localhost:3000/api/auth/api-token/regenerate \
+  -H "Authorization: Bearer <access_token>"
+```
+
+### DELETE /api/auth/api-token
+
+Revoke the current user's API token.
+
+```bash
+curl -X DELETE http://localhost:3000/api/auth/api-token \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## OIDC single sign-on
+
+Anchor supports OpenID Connect (OIDC) for single sign-on. OIDC must be enabled and configured by an admin before these endpoints are usable.
+
+### GET /api/auth/oidc/config
+
+Return the public OIDC configuration (provider name, enabled flag). No authentication required.
+
+```bash
+curl http://localhost:3000/api/auth/oidc/config
+```
+
+### GET /api/auth/oidc/initiate
+
+Redirect the browser to the OIDC provider's authorization page to start the login flow.
+
+<Tabs>
+  <Tab title="Query parameters">
+    <ParamField query="redirect" type="string">
+      Optional URL to redirect to after successful login.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    `302` redirect to the provider's authorization URL.
+  </Tab>
+</Tabs>
+
+### GET /api/auth/oidc/callback
+
+Handled automatically by the server. The provider redirects here after the user authenticates. The server exchanges the authorization code for tokens and then redirects the browser back to the frontend with a short-lived exchange code.
+
+<Note>
+This endpoint is not called directly by clients. It is the redirect URI you register with your OIDC provider.
+</Note>
+
+### POST /api/auth/oidc/exchange
+
+Exchange the one-time code received after the OIDC callback for an access token and user object. This is the final step in the browser-based OIDC flow.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="code" type="string" required>
+      The one-time exchange code from the OIDC callback redirect.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="access_token" type="string">JWT access token.</ResponseField>
+    <ResponseField name="refresh_token" type="string">Refresh token.</ResponseField>
+    <ResponseField name="user" type="object">Authenticated user object.</ResponseField>
+  </Tab>
+</Tabs>
+
+### POST /api/auth/oidc/exchange/mobile
+
+Exchange a mobile IdP access token (obtained natively on a mobile device) for Anchor access and refresh tokens.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="access_token" type="string" required>
+      The access token issued by the OIDC provider to the mobile client.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="access_token" type="string">Anchor JWT access token.</ResponseField>
+    <ResponseField name="refresh_token" type="string">Anchor refresh token.</ResponseField>
+    <ResponseField name="user" type="object">Authenticated user object.</ResponseField>
+  </Tab>
+</Tabs>

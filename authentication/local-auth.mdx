@@ -1,0 +1,78 @@
+---
+title: "Local authentication"
+description: "Username and password login — the default authentication method for Anchor."
+---
+
+Local authentication is enabled by default. Users sign in with an email address and password; no external identity provider is required.
+
+## Registering the first admin
+
+The first account registered on a new Anchor instance is automatically granted admin privileges. Navigate to your instance and complete the registration form to create this account.
+
+Subsequent registrations create regular user accounts, subject to the current [registration mode](#registration-modes).
+
+## Account fields
+
+Registration requires:
+
+- **Email** — must be a valid email address
+- **Name** — display name, up to 100 characters
+- **Password** — minimum 8 characters
+
+## Registration modes
+
+Anchor supports three registration modes that control whether new users can sign up:
+
+| Mode | Behaviour |
+|---|---|
+| `enabled` | Anyone can register a new account immediately. |
+| `disabled` | Registration is closed. No new accounts can be created. |
+| `review` | New accounts are placed in a pending state. An admin must approve the account before the user can log in. |
+
+The default mode is `enabled`.
+
+### Changing the registration mode
+
+You can set the registration mode in two ways:
+
+<Tabs>
+  <Tab title="Environment variable">
+    Set the `USER_SIGNUP` variable in your `docker-compose.yml`:
+
+    ```yaml
+    environment:
+      - USER_SIGNUP=disabled
+    ```
+
+    Valid values are `enabled`, `disabled`, and `review`. Setting this variable locks the mode and prevents admins from changing it through the admin panel.
+  </Tab>
+
+  <Tab title="Admin panel">
+    Go to **Admin → Settings → Registration** and select the desired mode. This option is only available when `USER_SIGNUP` is not set as an environment variable.
+  </Tab>
+</Tabs>
+
+<Note>
+  If `USER_SIGNUP` is not set as an environment variable, admins can change the registration mode at any time from the admin panel without restarting the container.
+</Note>
+
+## Reviewing pending accounts
+
+When the mode is set to `review`, newly registered users appear in the admin panel under **Admin → Users** with a pending status. Approve or reject each account from there.
+
+Pending users who attempt to log in via OIDC will also see a message indicating their account is awaiting approval.
+
+## Disabling local auth
+
+If you have configured OIDC as your sole login method, you can hide the local login form by setting:
+
+```yaml
+environment:
+  - DISABLE_INTERNAL_AUTH=true
+```
+
+This removes the email/password fields from the login page while keeping OIDC login available. See [OIDC authentication](/authentication/oidc) for full setup instructions.
+
+<Warning>
+  Do not set `DISABLE_INTERNAL_AUTH=true` unless OIDC is fully configured and working. Doing so will lock all users out of the local login form.
+</Warning>

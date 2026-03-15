@@ -1,0 +1,203 @@
+---
+title: "Tags"
+description: "Create, read, update, delete, and sync tags that can be attached to notes."
+---
+
+All tags endpoints require authentication and are served under `/api/tags`.
+
+## The tag object
+
+<ResponseField name="id" type="string">Unique tag ID (UUID).</ResponseField>
+<ResponseField name="name" type="string">Tag name. Unique per user.</ResponseField>
+<ResponseField name="color" type="string">Optional display color, or `null`.</ResponseField>
+<ResponseField name="isDeleted" type="boolean">Soft-delete flag.</ResponseField>
+<ResponseField name="userId" type="string">ID of the owning user.</ResponseField>
+<ResponseField name="createdAt" type="string">ISO 8601 creation timestamp.</ResponseField>
+<ResponseField name="updatedAt" type="string">ISO 8601 last-updated timestamp.</ResponseField>
+
+---
+
+## GET /api/tags
+
+Return all tags belonging to the authenticated user.
+
+```bash
+curl http://localhost:3000/api/tags \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response:** Array of tag objects.
+
+---
+
+## POST /api/tags
+
+Create a new tag.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="name" type="string" required>
+      Tag name. Must be unique for this user.
+    </ParamField>
+    <ParamField body="color" type="string">
+      Optional color string (e.g. a hex code or CSS color name).
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The created tag object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/tags \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "work", "color": "#4F46E5"}'
+```
+
+---
+
+## POST /api/tags/sync
+
+Offline-first sync endpoint. Sends local tag changes to the server and receives updates since `lastSyncedAt`.
+
+<Tabs>
+  <Tab title="Request">
+    <ParamField body="lastSyncedAt" type="string">
+      ISO 8601 timestamp of the last successful sync. Omit to fetch all tags.
+    </ParamField>
+    <ParamField body="changes" type="object[]">
+      Array of tag changes to apply.
+      <Expandable title="TagChangeDto properties">
+        <ParamField body="id" type="string" required>
+          Tag ID. If it does not exist on the server, a new tag is created.
+        </ParamField>
+        <ParamField body="name" type="string" required>
+          Tag name.
+        </ParamField>
+        <ParamField body="color" type="string">
+          Optional color.
+        </ParamField>
+        <ParamField body="updatedAt" type="string">
+          ISO 8601 client-side last-modified timestamp.
+        </ParamField>
+        <ParamField body="isDeleted" type="boolean">
+          Set to `true` to soft-delete the tag during sync.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    <ResponseField name="tags" type="object[]">
+      Tags updated on the server since `lastSyncedAt`.
+    </ResponseField>
+    <ResponseField name="syncedAt" type="string">
+      ISO 8601 timestamp to use as `lastSyncedAt` in the next sync call.
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+```bash
+curl -X POST http://localhost:3000/api/tags/sync \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"lastSyncedAt": "2024-03-10T09:00:00.000Z", "changes": []}'
+```
+
+---
+
+## GET /api/tags/:id
+
+Fetch a single tag by ID.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Tag ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    A single tag object.
+  </Tab>
+</Tabs>
+
+```bash
+curl http://localhost:3000/api/tags/b1c2d3e4-0000-0000-0000-000000000001 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## GET /api/tags/:id/notes
+
+Return all notes that have this tag attached.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Tag ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    Array of note objects.
+  </Tab>
+</Tabs>
+
+```bash
+curl http://localhost:3000/api/tags/b1c2d3e4-0000-0000-0000-000000000001/notes \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## PATCH /api/tags/:id
+
+Update a tag's name or color. All fields are optional.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Tag ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Request body">
+    <ParamField body="name" type="string">
+      New tag name. Must be unique for this user.
+    </ParamField>
+    <ParamField body="color" type="string">
+      New color string.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated tag object.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X PATCH http://localhost:3000/api/tags/b1c2d3e4-0000-0000-0000-000000000001 \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"color": "#10B981"}'
+```
+
+---
+
+## DELETE /api/tags/:id
+
+Soft-delete a tag by setting `isDeleted` to `true`. The tag is no longer returned in normal list responses, but existing note associations are preserved in the database.
+
+<Tabs>
+  <Tab title="Path parameters">
+    <ParamField path="id" type="string" required>
+      Tag ID.
+    </ParamField>
+  </Tab>
+  <Tab title="Response">
+    The updated tag object with `isDeleted: true`.
+  </Tab>
+</Tabs>
+
+```bash
+curl -X DELETE http://localhost:3000/api/tags/b1c2d3e4-0000-0000-0000-000000000001 \
+  -H "Authorization: Bearer <access_token>"
+```

@@ -1,0 +1,112 @@
+---
+title: "Deploy with Docker"
+description: "Run Anchor on your own server using Docker. Choose between a pre-built image or building from source."
+---
+
+Anchor ships as a single Docker image that bundles the web frontend, API server, and an embedded PostgreSQL database. No external services are required to get started.
+
+## Option 1: Pre-built image (recommended)
+
+<Steps>
+  <Step title="Create a docker-compose.yml file">
+    Create a `docker-compose.yml` file in a new directory:
+
+    ```yaml
+    services:
+      anchor:
+        image: ghcr.io/zhfahim/anchor:latest
+        container_name: anchor
+        restart: unless-stopped
+        ports:
+          - "3000:3000"
+        volumes:
+          - anchor_data:/data
+
+    volumes:
+      anchor_data:
+    ```
+  </Step>
+
+  <Step title="Configure environment variables (optional)">
+    Add an `environment` section to the service if you need to customise the deployment. Most users can skip this step — the defaults work out of the box.
+
+    ```yaml
+    services:
+      anchor:
+        image: ghcr.io/zhfahim/anchor:latest
+        container_name: anchor
+        restart: unless-stopped
+        ports:
+          - "3000:3000"
+        environment:
+          - APP_URL=https://notes.example.com
+          - JWT_SECRET=your-secret-here
+        volumes:
+          - anchor_data:/data
+
+    volumes:
+      anchor_data:
+    ```
+
+    See [Configuration](/self-hosting/configuration) for the full list of available variables.
+  </Step>
+
+  <Step title="Start the container">
+    ```bash
+    docker compose up -d
+    ```
+  </Step>
+
+  <Step title="Access the app">
+    Open [http://localhost:3000](http://localhost:3000) in your browser. The first account you register becomes the admin.
+  </Step>
+</Steps>
+
+## Option 2: Build from source
+
+Use this option if you want to customise the image or contribute to development.
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/zhfahim/anchor.git
+    cd anchor
+    ```
+  </Step>
+
+  <Step title="Start the container">
+    The `docker-compose.yml` in the repository root builds the image from source automatically:
+
+    ```bash
+    docker compose up -d
+    ```
+  </Step>
+
+  <Step title="Access the app">
+    Open [http://localhost:3000](http://localhost:3000) in your browser.
+  </Step>
+</Steps>
+
+<Note>
+  The source `docker-compose.yml` uses locally built images. Switch the `image` field to `ghcr.io/zhfahim/anchor:latest` and remove the `build` section if you want to use the pre-built image after cloning.
+</Note>
+
+## What runs inside the container
+
+The image is a self-contained unit managed by `supervisord`:
+
+- **Embedded PostgreSQL** — data is stored at `/data/postgres` inside the volume
+- **NestJS API server** — runs on port 3001 internally
+- **Next.js web app** — proxies API requests and serves on port 3000
+
+Database migrations run automatically every time the container starts.
+
+## Health check
+
+The image includes a built-in health check:
+
+```
+GET /api/health
+```
+
+Docker polls this endpoint every 30 seconds. The container is considered healthy once it responds successfully.
