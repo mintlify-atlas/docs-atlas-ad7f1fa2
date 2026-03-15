@@ -1,0 +1,130 @@
+{
+  "projectType": "saas",
+  "projectName": "Anchor",
+  "projectDescription": "An offline-first, self-hostable note-taking application with rich text editing, cross-device sync, note sharing, and OIDC authentication support.",
+  "theme": "almond",
+  "primaryColor": "#242b2c",
+  "lightColor": "#040404",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Getting Started",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["introduction"]
+          },
+          {
+            "group": "Self Hosting",
+            "pages": [
+              "self-hosting/docker",
+              "self-hosting/configuration",
+              "self-hosting/upgrading"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "authentication/local-auth",
+              "authentication/oidc"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Features",
+        "groups": [
+          {
+            "group": "Notes",
+            "pages": [
+              "features/notes",
+              "features/tags",
+              "features/sharing",
+              "features/search",
+              "features/offline-sync"
+            ]
+          },
+          {
+            "group": "Mobile App",
+            "pages": [
+              "features/mobile-app"
+            ]
+          },
+          {
+            "group": "Admin",
+            "pages": [
+              "features/admin-panel"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api/overview"]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/auth",
+              "api/notes",
+              "api/tags",
+              "api/sharing",
+              "api/admin"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Offline-first with local database and automatic sync across devices",
+    "Rich text editor with bold, italic, headings, lists, and checkboxes",
+    "Note sharing with viewer or editor permissions",
+    "Tags system with custom colors for note organization",
+    "Note backgrounds with solid colors and patterns",
+    "Pin and archive notes for quick access and organization",
+    "Full-text search by title or content",
+    "Soft delete with trash and recovery",
+    "Admin panel for user management and system settings",
+    "OIDC authentication support (Pocket ID, Authelia, Keycloak, etc.)",
+    "Self-hostable with Docker, supports embedded or external PostgreSQL",
+    "Flutter mobile app with Android APK distribution"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/login",
+    "POST /api/auth/register",
+    "POST /api/auth/refresh",
+    "GET /api/auth/oidc",
+    "GET /api/auth/oidc/callback",
+    "GET /api/notes",
+    "POST /api/notes",
+    "GET /api/notes/:id",
+    "PATCH /api/notes/:id",
+    "DELETE /api/notes/:id",
+    "DELETE /api/notes/:id/permanent",
+    "PATCH /api/notes/:id/restore",
+    "GET /api/notes/trash",
+    "GET /api/notes/archive",
+    "POST /api/notes/sync",
+    "POST /api/notes/bulk/delete",
+    "POST /api/notes/bulk/archive",
+    "GET /api/tags",
+    "POST /api/tags",
+    "PATCH /api/tags/:id",
+    "DELETE /api/tags/:id",
+    "POST /api/notes/:id/shares",
+    "GET /api/notes/:id/shares",
+    "PATCH /api/notes/:noteId/shares/:shareId",
+    "DELETE /api/notes/:noteId/shares/:shareId",
+    "GET /api/admin/users",
+    "PATCH /api/admin/users/:id",
+    "DELETE /api/admin/users/:id",
+    "GET /api/admin/stats",
+    "GET /api/settings",
+    "PATCH /api/settings"
+  ]
+}
